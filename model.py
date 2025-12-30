@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from config import GPTConfig
+
 
 class LayerNorm(nn.Module):
     def __init__(self, emb_dim):
@@ -16,24 +18,13 @@ class LayerNorm(nn.Module):
         return self.scale * norm_x + self.shift
 
 
-class GELU(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return 0.5 * x * (1 + torch.tanh(
-            torch.sqrt(torch.tensor(2.0 / torch.pi)) *
-            (x + 0.044715 * torch.pow(x, 3))
-        ))
-
-
 class FeedForward(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, emb_dim: int):
         super().__init__()
         self.layers = nn.Sequential(
-            nn.Linear(cfg["emb_dim"], 4 * cfg["emb_dim"]),
+            nn.Linear(emb_dim, 4 * emb_dim),
             nn.GELU(),
-            nn.Linear(4 * cfg["emb_dim"], cfg["emb_dim"])
+            nn.Linear(4 * emb_dim, emb_dim)
         )
 
     def forward(self, x):
@@ -107,22 +98,22 @@ class MultiHeadAttention(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, d_in, d_out, context_length, n_heads, dropout, qkv_bias):
         super().__init__()
 
         self.att = MultiHeadAttention(
-            d_in=cfg["emb_dim"],
-            d_out=cfg["emb_dim"],
-            context_length=cfg["context_length"],
-            num_heads=cfg["n_heads"],
-            dropout=cfg["drop_rate"],
-            qkv_bias=cfg["qkv_bias"]
+            d_in=d_in,
+            d_out=d_out,
+            context_length=context_length,
+            num_heads=n_heads,
+            dropout=dropout,
+            qkv_bias=qkv_bias,
         )
 
-        self.ff = FeedForward(cfg)
-        self.norm1 = LayerNorm(cfg["emb_dim"])
-        self.norm2 = LayerNorm(cfg["emb_dim"])
-        self.drop_shortcut = nn.Dropout(cfg["drop_rate"])
+        self.ff = FeedForward(d_in)
+        self.norm1 = LayerNorm(d_in)
+        self.norm2 = LayerNorm(d_in)
+        self.drop_shortcut = nn.Dropout(dropout)
 
     def forward(self, x):
         # Shortcut connection for attention block
@@ -145,17 +136,25 @@ class TransformerBlock(nn.Module):
 
 
 class GPTModel(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg: GPTConfig):
         super().__init__()
-        self.tok_emb = nn.Embedding(cfg["vocab_size"], cfg["emb_dim"])
-        self.pos_emb = nn.Embedding(cfg["context_length"], cfg["emb_dim"])
-        self.drop_emb = nn.Dropout(cfg["drop_rate"])
+        self.tok_emb = nn.Embedding(cfg.vocab_size, cfg.emb_dim)
+        self.pos_emb = nn.Embedding(cfg.context_length, cfg.emb_dim)
+        self.drop_emb = nn.Dropout(cfg.drop_rate)
 
         self.trf_blocks = nn.Sequential(
-            *[TransformerBlock(cfg) for _ in range(cfg["n_layers"])])
+            *[TransformerBlock(
+                d_in=cfg.emb_dim,
+                d_out=cfg.emb_dim,
+                context_length=cfg.context_length,
+                n_heads=cfg.n_heads,
+                dropout=cfg.drop_rate,
+                qkv_bias=cfg.qkv_bias,
+            ) for _ in range(cfg.n_layers)]
+        )
 
-        self.final_norm = LayerNorm(cfg["emb_dim"])
-        self.out_head = nn.Linear(cfg["emb_dim"], cfg["vocab_size"], bias=False)
+        self.final_norm = LayerNorm(cfg.emb_dim)
+        self.out_head = nn.Linear(cfg.emb_dim, cfg.vocab_size, bias=False)
 
     def forward(self, in_idx):
         batch_size, seq_len = in_idx.shape
