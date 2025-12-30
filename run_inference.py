@@ -13,7 +13,7 @@ from utils import (
 )
 
 # saved model
-CHECKPOINT_PATH = "gpt2_model.pth"
+CHECKPOINT_PATH = "./models/gpt2_model.pth"
 
 # model architecture
 model = GPTModel(GPT_CONFIG)
