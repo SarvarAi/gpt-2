@@ -20,9 +20,7 @@ from model import GPTModel
 from config import GPT_CONFIG
 from utils import (
     get_device,
-    generate_tokens_greedy,
-    encode_text_to_token_ids, 
-    decode_token_ids_to_text
+    generate_tokens_greedy
 )
 
 

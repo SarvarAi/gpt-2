@@ -1,0 +1,14 @@
+# Python virtual environment
+venv
+
+# Jupyter checkpoint files
+.ipynb_checkpoints
+
+# Pycharm's files
+.idea
+
+# Python cache files
+__pycache__/
+
+# Trained models
+models/
