@@ -152,11 +152,137 @@ print(f"Model: {response}")
 
 ---
 
+### **train.py**
+Comprehensive training module for GPT-2 model with full pipeline support.
+
+**Key Classes:**
+
+1. **GPTDatasetV1** - Custom PyTorch Dataset
+   - Creates overlapping sequences using sliding window approach
+   - Handles tokenization of raw text
+   - Generates input-target pairs for training
+
+**Key Functions:**
+
+1. **create_dataloader_v1()** → `DataLoader`
+   - Creates PyTorch DataLoader from raw text
+   - Handles tokenization and batching
+   - Supports shuffling and configurable batch size
+
+2. **calc_loss_batch()** → `torch.Tensor`
+   - Calculates cross-entropy loss for a single batch
+   - Handles device placement
+   - Flattens logits and targets for loss computation
+
+3. **calc_loss_loader()** → `float`
+   - Calculates average loss over entire data loader
+   - Supports evaluating on subset of batches
+   - Returns mean loss across batches
+
+4. **evaluate_model()** → `Tuple[float, float]`
+   - Evaluates model on both train and validation sets
+   - Returns (train_loss, val_loss)
+   - Switches model to eval mode during evaluation
+
+5. **generate_and_print_sample()** → `None`
+   - Generates sample text during training
+   - Useful for monitoring training progress
+   - Prints generated text for visual inspection
+
+6. **train_model_simple()** → `Tuple[List[float], List[float], List[int]]`
+   - Main training loop with periodic evaluation
+   - Tracks training/validation losses and tokens seen
+   - Generates sample text after each epoch
+   - Returns loss histories and token counts
+
+7. **save_checkpoint()** → `None`
+   - Saves model state, optimizer state, and config
+   - Enables resuming training or inference
+
+8. **load_checkpoint()** → `Dict`
+   - Loads checkpoint from disk
+   - Returns model state, optimizer state, and config
+
+9. **train()** → `Tuple[List[float], List[float], List[int], torch.nn.Module]`
+   - Complete end-to-end training pipeline
+   - Handles data loading, model initialization, training, and saving
+   - Returns training history and trained model
+
+**Training Pipeline:**
+```
+Raw Text Data
+    ↓
+[Split into train/validation]
+    ↓
+[Create DataLoaders with GPTDatasetV1]
+    ↓
+[Initialize GPTModel]
+    ↓
+[Training Loop]
+    ├─ Forward pass
+    ├─ Backward pass
+    ├─ Optimizer step
+    ├─ Periodic evaluation
+    └─ Sample generation
+    ↓
+[Save Checkpoint]
+    ↓
+Trained Model
+```
+
+**Example Usage:**
+```python
+from train import train
+
+# Load training data
+with open('training_text.txt', 'r') as f:
+    text_data = f.read()
+
+# Train the model
+train_losses, val_losses, tokens_seen, model = train(
+    text_data,
+    num_epochs=5,
+    batch_size=2,
+    learning_rate=0.0004,
+    eval_freq=5,
+    start_context="Every effort moves you"
+)
+```
+
+---
+
 ## 🚀 Quick Start
 
 ### Requirements
 - PyTorch
 - tiktoken (GPT-2 tokenizer)
+
+### Training
+
+```bash
+python -c "
+from train import train
+with open('your_text_file.txt', 'r') as f:
+    text_data = f.read()
+train_losses, val_losses, tokens_seen, model = train(text_data, num_epochs=5)
+"
+```
+
+Or use it as a module:
+
+```python
+from train import train
+
+with open('training_data.txt', 'r') as f:
+    text_data = f.read()
+
+train_losses, val_losses, tokens_seen, model = train(
+    text_data,
+    num_epochs=5,
+    batch_size=2,
+    learning_rate=0.0004
+)
+```
 
 ### Running Inference
 
@@ -221,8 +347,7 @@ Display result
 |------|---------|-------------------|
 | `config.py` | Configuration | `GPTConfig` |
 | `model.py` | Architecture | `GPTModel`, `TransformerBlock` |
-| `utils.py` | Utilities | `generate_tokens_greedy()`, `encode_text_to_token_ids()` |
-| `run_inference.py` | Inference | `generate_response_from_prompt()` |
+| `utils.py` | Utilities | `generate_tokens_greedy()`, `encode_text_to_token_ids()` || `train.py` | Training Pipeline | `train()`, `train_model_simple()`, `GPTDatasetV1` || `run_inference.py` | Inference | `generate_response_from_prompt()` |
 | `gpt2_model.pth` | Weights | Pre-trained model checkpoint |
 
 ---
